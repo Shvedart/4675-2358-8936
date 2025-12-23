@@ -87,6 +87,42 @@
       100% { background-color: #1a001a; }
     }
 
+    /* Progress bar on flash screen */
+    .progress {
+      position: relative;
+      width: min(90vw, 560px);
+      height: 18px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .progress-bar {
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff4d4d, #ffd700, #00e676, #00bcd4);
+      background-size: 200% 100%;
+      animation: barShift 2s linear infinite;
+      transition: width .2s linear;
+    }
+    .progress-label {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      pointer-events: none;
+    }
+    @keyframes barShift {
+      0% { background-position: 0% 0; }
+      100% { background-position: 200% 0; }
+    }
+
     /* Wheel */
     #wheel-wrap {
       position: relative;
@@ -138,6 +174,10 @@
 
   <div id="flash-screen" class="screen hidden">
     <h1 id="flash-text">Пизда</h1>
+    <div class="progress" id="flash-progress">
+      <div class="progress-bar" id="progress-bar"></div>
+      <div class="progress-label" id="progress-label">0%</div>
+    </div>
   </div>
 
   <div id="wheel-screen" class="screen hidden">
@@ -172,6 +212,8 @@
     const wheelCanvas = document.getElementById('wheel');
     const resultEl = document.getElementById('result');
     const ctx = wheelCanvas.getContext('2d');
+    const progressBarEl = document.getElementById('progress-bar');
+    const progressLabelEl = document.getElementById('progress-label');
 
     // Призы (10-й пункт заменён на безопасный шуточный)
     const prizes = [
@@ -309,14 +351,36 @@
       flashScreen.classList.remove('hidden');
       bodyEl.classList.add('flash-bg');
 
+      // Сброс прогресса
+      if (progressBarEl) progressBarEl.style.width = '0%';
+      if (progressLabelEl) progressLabelEl.textContent = '0%';
+
       try {
         await audioEl.play();
       } catch (e) {
         // Для совместимости: в некоторых браузерах может потребоваться взаимодействие пользователя
       }
 
+      // 10 секундная анимация прогресса 0 → 100%
+      let rafId;
+      const startTs = performance.now();
+      const duration = 10000; // 10s
+      const tick = (ts) => {
+        const elapsed = Math.min(duration, ts - startTs);
+        const pct = Math.round((elapsed / duration) * 100);
+        if (progressBarEl) progressBarEl.style.width = pct + '%';
+        if (progressLabelEl) progressLabelEl.textContent = pct + '%';
+        if (elapsed < duration) {
+          rafId = requestAnimationFrame(tick);
+        }
+      };
+      rafId = requestAnimationFrame(tick);
+
       setTimeout(() => {
         // Завершаем мигание через 10 сек
+        if (rafId) cancelAnimationFrame(rafId);
+        if (progressBarEl) progressBarEl.style.width = '100%';
+        if (progressLabelEl) progressLabelEl.textContent = '100%';
         flashScreen.classList.add('hidden');
         bodyEl.classList.remove('flash-bg');
         wheelScreen.classList.remove('hidden');
