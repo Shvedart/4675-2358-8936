@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Подарок</title>
+  <style>
+    :root {
+      --bg: #0b0b12;
+      --text: #f4f7fb;
+      --accent: #ff4d4d;
+      --btn-bg: #141827;
+      --btn-border: #2b2f44;
+      --btn-hover: #1b2040;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+    }
+
+    .screen {
+      display: grid;
+      place-items: center;
+      gap: 24px;
+      text-align: center;
+      padding: 24px;
+      width: 100%;
+      height: 100%;
+    }
+    h1.title {
+      font-size: clamp(32px, 7vw, 72px);
+      line-height: 1.1;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    .big-button {
+      font-size: clamp(22px, 4vw, 40px);
+      padding: 20px 40px;
+      border-radius: 16px;
+      border: 2px solid var(--btn-border);
+      background: linear-gradient(180deg, var(--btn-bg), #0d1122);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.05);
+      transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+      min-width: 500px;
+    }
+    .big-button:active { transform: scale(0.98); }
+    .big-button:hover { background: var(--btn-hover); }
+    .hidden { display: none !important; }
+
+    /* Flashing stage */
+    #flash-text {
+      font-weight: 900;
+      font-size: clamp(56px, 12vw, 160px);
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px rgba(255,255,255,.2);
+      animation: textFlash 1s linear infinite;
+    }
+    .flash-bg {
+      animation: bgFlash 1s linear infinite;
+    }
+    @keyframes textFlash {
+      0%   { color: #ff3b3b; text-shadow: 0 0 20px rgba(255,59,59,.6), 0 0 40px rgba(255,59,59,.4); }
+      20%  { color: #ff8c00; text-shadow: 0 0 20px rgba(255,140,0,.6), 0 0 40px rgba(255,140,0,.4); }
+      40%  { color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,.6), 0 0 40px rgba(255,215,0,.4); }
+      60%  { color: #00e676; text-shadow: 0 0 20px rgba(0,230,118,.6), 0 0 40px rgba(0,230,118,.4); }
+      80%  { color: #00bcd4; text-shadow: 0 0 20px rgba(0,188,212,.6), 0 0 40px rgba(0,188,212,.4); }
+      100% { color: #8a2be2; text-shadow: 0 0 20px rgba(138,43,226,.6), 0 0 40px rgba(138,43,226,.4); }
+    }
+    @keyframes bgFlash {
+      0%   { background-color: #10001a; }
+      20%  { background-color: #1a0033; }
+      40%  { background-color: #1a1a00; }
+      60%  { background-color: #001a0d; }
+      80%  { background-color: #00131a; }
+      100% { background-color: #1a001a; }
+    }
+
+    /* Wheel */
+    #wheel-wrap {
+      position: relative;
+      width: min(90vw, 620px);
+      height: min(90vw, 620px);
+      display: grid;
+      place-items: center;
+      margin-inline: auto;
+    }
+    #wheel {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 24px 60px rgba(0,0,0,0.55));
+      border-radius: 50%;
+      background: radial-gradient( circle at 50% 50%, #1f2448 0%, #0f1330 65%, #0a0d24 100% );
+      transform: rotate(0deg);
+    }
+    /* Pointer */
+    .pointer {
+      position: absolute;
+      top: -8px;
+      /* left: 50%; */
+      /* transform: translateX(-50%); */
+      width: 0; height: 0;
+      rotate: 180deg;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-bottom: 28px solid #ffd700;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+    .wheel-legend {
+      margin-top: 18px;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    .controls {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <audio id="prank-audio" src="da.mp3" preload="auto"></audio>
+
+  <div id="start-screen" class="screen">
+    <h1 class="title">Ты готов получить подарок?</h1>
+    <button id="start-btn" class="big-button">Да!</button>
+  </div>
+
+  <div id="flash-screen" class="screen hidden">
+    <h1 id="flash-text">Пизда</h1>
+  </div>
+
+  <div id="wheel-screen" class="screen hidden">
+    <div id="wheel-wrap">
+      <canvas id="wheel" width="600" height="600"></canvas>
+      <div class="pointer"></div>
+    </div>
+    <div class="controls">
+      <button id="spin-btn" class="big-button">Забрать подарок</button>
+    </div>
+    <div id="result" class="wheel-legend"></div>
+  </div>
+
+  <div id="result-screen" class="screen hidden">
+    <h1 id="win-title" class="title" style="font-size:clamp(40px,8vw,96px);">Вы выиграли!</h1>
+    <div id="win-prize" style="font-weight:800;font-size:clamp(28px,6vw,56px)"></div>
+    <button id="replay-btn" class="big-button">Сыграть ещё раз</button>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('start-btn');
+    const spinBtn = document.getElementById('spin-btn');
+    const startScreen = document.getElementById('start-screen');
+    const flashScreen = document.getElementById('flash-screen');
+    const wheelScreen = document.getElementById('wheel-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const winTitleEl = document.getElementById('win-title');
+    const winPrizeEl = document.getElementById('win-prize');
+    const replayBtn = document.getElementById('replay-btn');
+    const bodyEl = document.body;
+    const audioEl = document.getElementById('prank-audio');
+    const wheelCanvas = document.getElementById('wheel');
+    const resultEl = document.getElementById('result');
+    const ctx = wheelCanvas.getContext('2d');
+
+    // Призы (10-й пункт заменён на безопасный шуточный)
+    const prizes = [
+      'Вилла на Бали',
+      'Личный вертолёт',
+      'Гиперкар',
+      'Дрифт-корч',
+      'Частный остров',
+      'Космический тур',
+      'Яхта',
+      'Замок в Европе',
+      'Дом в горах',
+      'Нихуя',
+      'Личный самолёт',
+      'Квартира в Нью-Йорке'
+    ];
+
+    // Цвета долек (яркие и гармоничные, равномерно по кругу)
+    function sliceColor(index) {
+      const hue = (index * (360 / prizes.length)) % 360;
+      return 'hsl(' + hue + ', 85%, 55%)';
+    }
+
+    const size = wheelCanvas.width; // 600
+    const center = size / 2;
+    const radius = size / 2 - 8;
+    const segmentAngle = (Math.PI * 2) / prizes.length;
+
+    function drawWheel() {
+      ctx.clearRect(0, 0, size, size);
+
+      // Вращаем систему координат к центру
+      ctx.save();
+      ctx.translate(center, center);
+
+      for (let i = 0; i < prizes.length; i++) {
+        const start = i * segmentAngle - Math.PI / 2 - segmentAngle / 2; // центр 0-го вверху
+        const end = start + segmentAngle;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = sliceColor(i);
+        ctx.fill();
+
+        // Разделительные линии
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.stroke();
+
+        // Подписи
+        {
+          ctx.save();
+          const textAngle = start + segmentAngle / 2; // ось сектора
+          ctx.rotate(textAngle);
+          const label = prizes[i];
+
+          // Настройка шрифта и цвета
+          const baseFont = 18;
+          const fontSize =
+            label.length > 20 ? 14 :
+            label.length > 16 ? 16 : baseFont;
+          ctx.fillStyle = '#0b0b12';
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.lineWidth = 2;
+          ctx.font = 'bold ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          // Радиальная верстка: без сильного растягивания
+          const chars = Array.from(label);
+          const rStart = Math.max(52, radius * 0.33);
+          const rEnd = radius - 34;
+          const naturalStep = fontSize * 0.85; // было 1.05 — ближе буквы
+          const minStep = fontSize * 0.70;
+          const maxStep = fontSize * 1.05;
+          let step = naturalStep;
+          const need = rStart + naturalStep * Math.max(0, chars.length - 1);
+          if (need > rEnd) {
+            step = Math.max(minStep, (rEnd - rStart) / Math.max(1, chars.length - 1));
+          }
+          // Не расширяем больше, чем слегка
+          step = Math.min(step, maxStep);
+
+          let rPos = rStart;
+          for (const ch of chars) {
+            if (ch === ' ') { rPos += step * 0.35; continue; } // меньше отступ для пробела
+            ctx.strokeText(ch, rPos, 0);
+            ctx.fillText(ch, rPos, 0);
+            rPos += step;
+            if (rPos > rEnd) break;
+          }
+          ctx.restore();
+        }
+      }
+
+      // Центральная заглушка
+      ctx.beginPath();
+      ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      ctx.fillStyle = '#f4f7fb';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#222845';
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(' ');
+      let line = '';
+      let lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+      const totalHeight = (lines.length - 1) * lineHeight;
+      for (let i = 0; i < lines.length; i++) {
+        context.fillText(lines[i], x, y - totalHeight / 2 + i * lineHeight);
+      }
+    }
+
+    drawWheel();
+
+    // Этап 1 -> Этап 2
+    startBtn.addEventListener('click', async () => {
+      startScreen.classList.add('hidden');
+      flashScreen.classList.remove('hidden');
+      bodyEl.classList.add('flash-bg');
+
+      try {
+        await audioEl.play();
+      } catch (e) {
+        // Для совместимости: в некоторых браузерах может потребоваться взаимодействие пользователя
+      }
+
+      setTimeout(() => {
+        // Завершаем мигание через 10 сек
+        flashScreen.classList.add('hidden');
+        bodyEl.classList.remove('flash-bg');
+        wheelScreen.classList.remove('hidden');
+      }, 10000);
+    });
+
+    // Вращение колеса
+    let spinning = false;
+    let accumulatedTurns = 0;
+    let lastPrize = '';
+
+    spinBtn.addEventListener('click', () => {
+      if (spinning) return;
+      spinning = true;
+      resultEl.textContent = '';
+      spinBtn.disabled = true;
+      spinBtn.style.opacity = '0.6';
+      spinBtn.style.cursor = 'not-allowed';
+
+      const targetIndex = 9; // всегда 10-й пункт (0-based)
+      const degPerSeg = 360 / prizes.length;
+      const centerDeg = targetIndex * degPerSeg; // т.к. 0-й центр смотрит вверх
+      const fullTurns = 12; // количество полных оборотов
+      accumulatedTurns += fullTurns;
+
+      // Сброс прошлой анимации
+      wheelCanvas.style.transition = 'none';
+      void wheelCanvas.offsetWidth; // reflow
+
+      const finalDeg = accumulatedTurns * 360 + (360 - centerDeg);
+      wheelCanvas.style.transition = 'transform 40s cubic-bezier(0.05, 0.1, 0, 1)';
+      wheelCanvas.style.transform = 'rotate(' + finalDeg + 'deg)';
+
+      setTimeout(() => {
+        spinning = false;
+        spinBtn.disabled = false;
+        spinBtn.style.opacity = '1';
+        spinBtn.style.cursor = 'pointer';
+        lastPrize = prizes[targetIndex];
+        resultEl.textContent = 'Ваш приз: ' + lastPrize;
+
+        // Через 3 секунды показываем финишный экран
+        setTimeout(() => {
+          wheelScreen.classList.add('hidden');
+          winTitleEl.textContent = 'Вы выиграли!';
+          winPrizeEl.textContent = lastPrize;
+          resultScreen.classList.remove('hidden');
+        }, 3000);
+      }, 40000);
+    });
+
+    // Повторная игра
+    replayBtn?.addEventListener('click', () => {
+      // Сброс колеса
+      wheelCanvas.style.transition = 'none';
+      wheelCanvas.style.transform = 'rotate(0deg)';
+      void wheelCanvas.offsetWidth;
+      accumulatedTurns = 0;
+      resultEl.textContent = '';
+      // Показать экран с колесом
+      resultScreen.classList.add('hidden');
+      wheelScreen.classList.remove('hidden');
+      spinBtn.disabled = false;
+      spinBtn.style.opacity = '1';
+      spinBtn.style.cursor = 'pointer';
+    });
+  </script>
+</body>
+</html>
+
+
